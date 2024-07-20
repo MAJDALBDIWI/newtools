@@ -6,44 +6,55 @@ document.addEventListener("DOMContentLoaded", function () {
     const prevButton = document.getElementById("prevButton");
     const nextButton = document.getElementById("nextButton");
     const outputDiv = document.getElementById("output");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const pageTitle = document.getElementById("pageTitle");
 
     let sentences = [];
     let currentIndex = 0;
     let isPlaying = false;
-    let translationEnabled = false;
 
     function translateText(text, targetLang, callback) {
-        // Make a request to Google Translate web page
-        const url = `https://translate.google.com/?sl=de&tl=${targetLang}&text=${encodeURIComponent(text)}`;
-        fetch(url)
-            .then(response => response.text())
-            .then(data => {
-                const translation = extractTranslation(data);
-                callback(translation);
-            })
-            .catch(error => {
-                console.error("Error fetching translation:", error);
-                callback("Übersetzung nicht verfügbar");
-            });
+        // Dummy translations; replace with actual translation logic if needed
+        const translations = {
+            'ar': {
+                'Hallo Welt': 'مرحبا بالعالم',
+                'Wie geht es Ihnen?': 'كيف حالك؟'
+            },
+            'tr': {
+                'Hallo Welt': 'Merhaba Dünya',
+                'Wie geht es Ihnen?': 'Nasılsınız?'
+            },
+            'uk': {
+                'Hallo Welt': 'Привіт Світ',
+                'Wie geht es Ihnen?': 'Як справи?'
+            }
+        };
+        const translatedText = translations[targetLang][text] || text;
+        callback(translatedText);
     }
 
-    function extractTranslation(html) {
-        // Extract translation from HTML using regular expressions
-        const regex = /<span class="tlid-translation translation">(.*?)<\/span>/;
-        const match = regex.exec(html);
-        return match ? match[1] : "Übersetzung nicht verfügbar";
-    }
-
-    function updateOutput() {
+    function updateOutput(translation) {
         if (sentences.length > 0) {
             const sentence = sentences[currentIndex];
             outputDiv.innerHTML = `<p><strong>Deutsch:</strong> ${sentence}</p>`;
-            const lang = languageSelect.value;
-            if (translationEnabled) {
-                translateText(sentence, lang, (translatedText) => {
-                    outputDiv.innerHTML += `<p><strong>Übersetzung:</strong> ${translatedText}</p>`;
-                });
-            }
+            outputDiv.innerHTML += `<p><strong>Übersetzung:</strong> ${translation}</p>`;
+        }
+    }
+
+    function updateAudio(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'de-DE';
+        speechSynthesis.speak(utterance);
+    }
+
+    function handlePlay() {
+        if (sentences.length > 0) {
+            const sentence = sentences[currentIndex];
+            updateAudio(sentence);
+            translateText(sentence, languageSelect.value, (translation) => {
+                updateOutput(translation);
+            });
+            isPlaying = true;
         }
     }
 
@@ -51,25 +62,31 @@ document.addEventListener("DOMContentLoaded", function () {
         sentences = textInput.value.split(".").map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
         currentIndex = 0;
         isPlaying = true;
-        translationEnabled = true;
-        updateOutput();
+        handlePlay();
     });
 
     stopButton.addEventListener("click", function () {
+        speechSynthesis.cancel();
         isPlaying = false;
     });
 
     prevButton.addEventListener("click", function () {
         if (currentIndex > 0) {
             currentIndex--;
-            updateOutput();
+            updateAudio(sentences[currentIndex]);
+            translateText(sentences[currentIndex], languageSelect.value, (translation) => {
+                updateOutput(translation);
+            });
         }
     });
 
     nextButton.addEventListener("click", function () {
         if (currentIndex < sentences.length - 1) {
             currentIndex++;
-            updateOutput();
+            updateAudio(sentences[currentIndex]);
+            translateText(sentences[currentIndex], languageSelect.value, (translation) => {
+                updateOutput(translation);
+            });
         }
     });
 });
