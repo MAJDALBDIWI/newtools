@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Übersetzungsplattform</title>
+    <title>Sprachübung</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -28,15 +28,12 @@
             border-radius: 5px;
             border: 1px solid #ddd;
         }
-        select, button {
+        button {
             margin: 5px;
             padding: 10px;
             font-size: 16px;
             border-radius: 5px;
             border: 1px solid #ddd;
-        }
-        select {
-            width: 200px;
         }
         button {
             background-color: #007BFF;
@@ -58,120 +55,122 @@
         }
         #controls {
             display: flex;
-            justify-content: center;
             flex-direction: column;
             align-items: center;
         }
-        .btn-group {
-            display: flex;
-            justify-content: space-between;
-            width: 60%;
+        #countdown {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #d9534f;
+        }
+        #recording-status {
+            margin-top: 20px;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <h1>Übersetzungsplattform</h1>
+    <h1>Sprachübung</h1>
     <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
-    <div>
-        <label for="languageSelect">Wählen Sie die Sprache:</label>
-        <select id="languageSelect">
-            <option value="ar">Arabisch</option>
-            <option value="tr">Türkisch</option>
-            <option value="uk">Ukrainisch</option>
-        </select>
+    <button id="startButton">Starten</button>
+    <div id="controls">
+        <p id="currentSentence"></p>
+        <button id="recordButton" disabled>Aufnehmen</button>
+        <p id="countdown">15</p>
+        <div id="recording-status"></div>
+        <button id="playRecorded" disabled>Aufgenommenes abspielen</button>
+        <div id="output"></div>
     </div>
-    <div id="controls" class="btn-group">
-        <button id="startButton">Starten</button>
-        <button id="toggleButton">Stoppen</button>
-        <div class="btn-group">
-            <button id="prevButton">Vorherige</button>
-            <button id="nextButton">Nächste</button>
-        </div>
-    </div>
-    <div id="output"></div>
 
-    <!-- Include ResponsiveVoice library -->
-    <script src="https://code.responsivevoice.org/responsivevoice.js?key=YOUR_API_KEY"></script>
-    
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const textInput = document.getElementById("textInput");
-            const languageSelect = document.getElementById("languageSelect");
-            const startButton = document.getElementById("startButton");
-            const toggleButton = document.getElementById("toggleButton");
-            const prevButton = document.getElementById("prevButton");
-            const nextButton = document.getElementById("nextButton");
-            const outputDiv = document.getElementById("output");
+        let sentences = [];
+        let currentIndex = 0;
+        let recording = false;
+        let mediaRecorder;
+        let recordedChunks = [];
 
-            let sentences = [];
-            let currentIndex = 0;
-            let isPlaying = false;
-            let isPaused = false;
-
-            function fetchTranslation(text, targetLang) {
-                // Open Google Translate with the text to translate
-                const url = `https://translate.google.com/?sl=de&tl=${targetLang}&text=${encodeURIComponent(text)}`;
-                window.open(url, '_blank');
-            }
-
-            function speakText(text) {
-                responsiveVoice.speak(text, "German Female", {
-                    onend: function() {
-                        if (currentIndex < sentences.length - 1 && isPlaying) {
-                            currentIndex++;
-                            handlePlay();
-                        }
-                    }
-                });
-            }
-
-            async function handlePlay() {
-                if (sentences.length > 0 && currentIndex < sentences.length) {
-                    const sentence = sentences[currentIndex];
-                    speakText(sentence);
-                    fetchTranslation(sentence, languageSelect.value);
-                    isPlaying = true;
-                    isPaused = false;
-                    toggleButton.textContent = "Stoppen";
-                }
-            }
-
-            startButton.addEventListener("click", function() {
-                sentences = textInput.value.split(".").map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
-                currentIndex = 0;
-                handlePlay();
-            });
-
-            toggleButton.addEventListener("click", function() {
-                if (isPlaying) {
-                    responsiveVoice.cancel();
-                    isPlaying = false;
-                    isPaused = true;
-                    toggleButton.textContent = "Fortsetzen";
-                } else if (isPaused) {
-                    handlePlay();
-                    toggleButton.textContent = "Stoppen";
-                }
-            });
-
-            prevButton.addEventListener("click", function() {
-                if (currentIndex > 0) {
-                    currentIndex--;
-                    const sentence = sentences[currentIndex];
-                    speakText(sentence);
-                    fetchTranslation(sentence, languageSelect.value);
-                }
-            });
-
-            nextButton.addEventListener("click", function() {
-                if (currentIndex < sentences.length - 1) {
-                    currentIndex++;
-                    const sentence = sentences[currentIndex];
-                    speakText(sentence);
-                    fetchTranslation(sentence, languageSelect.value);
-                }
-            });
+        document.getElementById('startButton').addEventListener('click', function() {
+            const textInput = document.getElementById('textInput').value;
+            sentences = textInput.split('.').map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
+            currentIndex = 0;
+            displaySentence();
         });
+
+        document.getElementById('recordButton').addEventListener('click', function() {
+            if (!recording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        document.getElementById('playRecorded').addEventListener('click', function() {
+            playRecordedAudio();
+        });
+
+        function displaySentence() {
+            if (currentIndex < sentences.length) {
+                const sentence = sentences[currentIndex];
+                document.getElementById('currentSentence').innerText = sentence;
+                speakText(sentence);
+                startCountdown();
+            }
+        }
+
+        function speakText(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'de-DE';
+            speechSynthesis.speak(utterance);
+        }
+
+        function startCountdown() {
+            const countdownElem = document.getElementById('countdown');
+            let timeLeft = 15;
+            countdownElem.innerText = timeLeft;
+            const intervalId = setInterval(function() {
+                timeLeft--;
+                countdownElem.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(intervalId);
+                    document.getElementById('recordButton').disabled = false;
+                    document.getElementById('recording-status').innerText = 'Sie können jetzt aufnehmen!';
+                }
+            }, 1000);
+        }
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = function(event) {
+                recordedChunks.push(event.data);
+            };
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                const audioURL = URL.createObjectURL(blob);
+                document.getElementById('playRecorded').disabled = false;
+                document.getElementById('recording-status').innerText = 'Aufnahme beendet! Sie können die Aufnahme jetzt abspielen.';
+                recordedChunks = [];
+                document.getElementById('recordedAudio').src = audioURL;
+            };
+            mediaRecorder.start();
+            recording = true;
+            document.getElementById('recordButton').innerText = 'Stoppen';
+            document.getElementById('recording-status').innerText = 'Aufnahme läuft...';
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            recording = false;
+            document.getElementById('recordButton').innerText = 'Aufnehmen';
+        }
+
+        function playRecordedAudio() {
+            const audioElement = document.createElement('audio');
+            audioElement.src = document.getElementById('recordedAudio').src;
+            audioElement.controls = true;
+            document.getElementById('output').appendChild(audioElement);
+            audioElement.play();
+        }
     </script>
 </body>
 </html>
