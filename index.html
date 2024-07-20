@@ -77,23 +77,23 @@
             let isPlaying = false;
             let utterance;
 
-            function translateText(text, targetLang) {
-                // Simple in-browser translation using a dictionary or custom logic
-                const translations = {
-                    "ar": {
-                        "Hallo, wie geht es dir?": "مرحباً، كيف حالك؟",
-                        "Ich habe Hunger.": "أنا جائع."
-                    },
-                    "tr": {
-                        "Hallo, wie geht es dir?": "Merhaba, nasılsın?",
-                        "Ich habe Hunger.": "Açım."
-                    },
-                    "uk": {
-                        "Hallo, wie geht es dir?": "Привіт, як ти?",
-                        "Ich habe Hunger.": "Я голодний."
-                    }
-                };
+            // Example translations
+            const translations = {
+                "ar": {
+                    "Hallo, wie geht es dir?": "مرحباً، كيف حالك؟",
+                    "Ich habe Hunger.": "أنا جائع."
+                },
+                "tr": {
+                    "Hallo, wie geht es dir?": "Merhaba, nasılsın?",
+                    "Ich habe Hunger.": "Açım."
+                },
+                "uk": {
+                    "Hallo, wie geht es dir?": "Привіт, як ти?",
+                    "Ich habe Hunger.": "Я голодний."
+                }
+            };
 
+            function translateText(text, targetLang) {
                 return translations[targetLang] && translations[targetLang][text] ? translations[targetLang][text] : text;
             }
 
@@ -107,7 +107,7 @@
             }
 
             function handlePlay() {
-                if (sentences.length > 0) {
+                if (sentences.length > 0 && currentIndex < sentences.length) {
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
                     const translation = translateText(sentence, languageSelect.value);
@@ -136,18 +136,27 @@
             prevButton.addEventListener("click", function() {
                 if (currentIndex > 0) {
                     currentIndex--;
-                    speakText(sentences[currentIndex]);
-                    const translation = translateText(sentences[currentIndex], languageSelect.value);
-                    updateOutput(sentences[currentIndex], translation);
+                    const sentence = sentences[currentIndex];
+                    speakText(sentence);
+                    const translation = translateText(sentence, languageSelect.value);
+                    updateOutput(sentence, translation);
                 }
             });
 
             nextButton.addEventListener("click", function() {
                 if (currentIndex < sentences.length - 1) {
                     currentIndex++;
-                    speakText(sentences[currentIndex]);
-                    const translation = translateText(sentences[currentIndex], languageSelect.value);
-                    updateOutput(sentences[currentIndex], translation);
+                    const sentence = sentences[currentIndex];
+                    speakText(sentence);
+                    const translation = translateText(sentence, languageSelect.value);
+                    updateOutput(sentence, translation);
+                }
+            });
+
+            // Make sure we don't attempt to play or translate when paused
+            document.addEventListener('keydown', function(event) {
+                if (event.key === ' ' && isPlaying) {
+                    stopButton.click();
                 }
             });
         });
