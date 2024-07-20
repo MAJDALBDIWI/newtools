@@ -52,10 +52,18 @@ button:hover {
     color: #d9534f;
 }
 
-#recording-status, #recordedText, #differences {
+#recording-status, #recordedText, #comparison {
     margin-top: 20px;
 }
 
 .hidden {
     display: none;
+}
+
+.correct {
+    color: green;
+}
+
+.incorrect {
+    color: red;
 }
