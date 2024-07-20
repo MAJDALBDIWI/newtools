@@ -6,42 +6,66 @@
     <title>Übersetzungsplattform</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
-            background: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #007BFF;
         }
         textarea {
             width: 80%;
             height: 100px;
+            padding: 10px;
             margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
         }
         select, button {
             margin: 5px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        select {
+            width: 200px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
         #output {
             margin-top: 20px;
             padding: 20px;
             border: 1px solid #ddd;
-            background: #fff;
+            background-color: #fff;
             width: 80%;
             border-radius: 5px;
+            text-align: left;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: #007BFF;
-            color: #fff;
+        #controls {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
         }
-        button:hover {
-            background: #0056b3;
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            width: 60%;
         }
     </style>
 </head>
@@ -55,10 +79,14 @@
             <option value="tr">Türkisch</option>
             <option value="uk">Ukrainisch</option>
         </select>
+    </div>
+    <div id="controls" class="btn-group">
         <button id="startButton">Starten</button>
         <button id="stopButton">Stoppen</button>
-        <button id="prevButton">Vorherige</button>
-        <button id="nextButton">Nächste</button>
+        <div class="btn-group">
+            <button id="prevButton">Vorherige</button>
+            <button id="nextButton">Nächste</button>
+        </div>
     </div>
     <div id="output"></div>
 
@@ -75,26 +103,13 @@
             let sentences = [];
             let currentIndex = 0;
             let isPlaying = false;
+            let isPaused = false;
             let utterance;
 
-            // Example translations
-            const translations = {
-                "ar": {
-                    "Hallo, wie geht es dir?": "مرحباً، كيف حالك؟",
-                    "Ich habe Hunger.": "أنا جائع."
-                },
-                "tr": {
-                    "Hallo, wie geht es dir?": "Merhaba, nasılsın?",
-                    "Ich habe Hunger.": "Açım."
-                },
-                "uk": {
-                    "Hallo, wie geht es dir?": "Привіт, як ти?",
-                    "Ich habe Hunger.": "Я голодний."
-                }
-            };
-
-            function translateText(text, targetLang) {
-                return translations[targetLang] && translations[targetLang][text] ? translations[targetLang][text] : text;
+            async function fetchTranslation(text, targetLang) {
+                const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=de|${targetLang}`);
+                const data = await response.json();
+                return data.responseData.translatedText;
             }
 
             function speakText(text) {
@@ -106,13 +121,14 @@
                 speechSynthesis.speak(utterance);
             }
 
-            function handlePlay() {
+            async function handlePlay() {
                 if (sentences.length > 0 && currentIndex < sentences.length) {
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = translateText(sentence, languageSelect.value);
+                    const translation = await fetchTranslation(sentence, languageSelect.value);
                     updateOutput(sentence, translation);
                     isPlaying = true;
+                    isPaused = false;
                 }
             }
 
@@ -121,42 +137,41 @@
                 outputDiv.innerHTML += `<p><strong>Übersetzung:</strong> ${translation}</p>`;
             }
 
-            startButton.addEventListener("click", function() {
+            startButton.addEventListener("click", async function() {
                 sentences = textInput.value.split(".").map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
                 currentIndex = 0;
-                isPlaying = true;
-                handlePlay();
+                await handlePlay();
             });
 
             stopButton.addEventListener("click", function() {
-                speechSynthesis.cancel();
-                isPlaying = false;
+                if (isPlaying) {
+                    speechSynthesis.cancel();
+                    isPlaying = false;
+                    isPaused = true;
+                    stopButton.textContent = "Fortsetzen";
+                } else if (isPaused) {
+                    handlePlay();
+                    stopButton.textContent = "Stoppen";
+                }
             });
 
-            prevButton.addEventListener("click", function() {
+            prevButton.addEventListener("click", async function() {
                 if (currentIndex > 0) {
                     currentIndex--;
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = translateText(sentence, languageSelect.value);
+                    const translation = await fetchTranslation(sentence, languageSelect.value);
                     updateOutput(sentence, translation);
                 }
             });
 
-            nextButton.addEventListener("click", function() {
+            nextButton.addEventListener("click", async function() {
                 if (currentIndex < sentences.length - 1) {
                     currentIndex++;
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = translateText(sentence, languageSelect.value);
+                    const translation = await fetchTranslation(sentence, languageSelect.value);
                     updateOutput(sentence, translation);
-                }
-            });
-
-            // Make sure we don't attempt to play or translate when paused
-            document.addEventListener('keydown', function(event) {
-                if (event.key === ' ' && isPlaying) {
-                    stopButton.click();
                 }
             });
         });
