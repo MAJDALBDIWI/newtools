@@ -119,7 +119,9 @@ function startRecording() {
 }
 
 function stopRecording() {
-    mediaRecorder.stop();
+    if (mediaRecorder) {
+        mediaRecorder.stop();
+    }
     recording = false;
     document.getElementById('recordButton').innerText = 'Aufnehmen';
 }
