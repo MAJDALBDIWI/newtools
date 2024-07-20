@@ -3,30 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Übersetzer Plattform</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Übersetzungsplattform</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #f4f4f4;
+        }
+        textarea {
+            width: 80%;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+        select, button {
+            margin: 5px;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background: #fff;
+            width: 80%;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #007BFF;
+            color: #fff;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 id="pageTitle">Übersetzer Plattform</h1>
-        <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
-        <div class="controls">
-            <label for="languageSelect">Wählen Sie die Sprache:</label>
-            <select id="languageSelect">
-                <option value="ar">Arabisch</option>
-                <option value="tr">Türkisch</option>
-                <option value="uk">Ukrainisch</option>
-            </select>
-            <button id="startButton">Starten</button>
-            <button id="stopButton">Stoppen</button>
-            <button id="prevButton">Vorherige</button>
-            <button id="nextButton">Nächste</button>
-        </div>
-        <div id="output"></div>
-        <audio id="audioPlayer" controls></audio>
+    <h1>Übersetzungsplattform</h1>
+    <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
+    <div>
+        <label for="languageSelect">Wählen Sie die Sprache:</label>
+        <select id="languageSelect">
+            <option value="ar">Arabisch</option>
+            <option value="tr">Türkisch</option>
+            <option value="uk">Ukrainisch</option>
+        </select>
+        <button id="startButton">Starten</button>
+        <button id="stopButton">Stoppen</button>
+        <button id="prevButton">Vorherige</button>
+        <button id="nextButton">Nächste</button>
     </div>
+    <div id="output"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/translate.js"></script>
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const textInput = document.getElementById("textInput");
+            const languageSelect = document.getElementById("languageSelect");
+            const startButton = document.getElementById("startButton");
+            const stopButton = document.getElementById("stopButton");
+            const prevButton = document.getElementById("prevButton");
+            const nextButton = document.getElementById("nextButton");
+            const outputDiv = document.getElementById("output");
+
+            let sentences = [];
+            let currentIndex = 0;
+            let isPlaying = false;
+            let utterance;
+
+            function translateText(text, targetLang) {
+                // Simple in-browser translation using a dictionary or custom logic
+                const translations = {
+                    "ar": {
+                        "Hallo, wie geht es dir?": "مرحباً، كيف حالك؟",
+                        "Ich habe Hunger.": "أنا جائع."
+                    },
+                    "tr": {
+                        "Hallo, wie geht es dir?": "Merhaba, nasılsın?",
+                        "Ich habe Hunger.": "Açım."
+                    },
+                    "uk": {
+                        "Hallo, wie geht es dir?": "Привіт, як ти?",
+                        "Ich habe Hunger.": "Я голодний."
+                    }
+                };
+
+                return translations[targetLang] && translations[targetLang][text] ? translations[targetLang][text] : text;
+            }
+
+            function speakText(text) {
+                if (utterance) {
+                    speechSynthesis.cancel(); // Cancel previous utterance if any
+                }
+                utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'de-DE'; // German language
+                speechSynthesis.speak(utterance);
+            }
+
+            function handlePlay() {
+                if (sentences.length > 0) {
+                    const sentence = sentences[currentIndex];
+                    speakText(sentence);
+                    const translation = translateText(sentence, languageSelect.value);
+                    updateOutput(sentence, translation);
+                    isPlaying = true;
+                }
+            }
+
+            function updateOutput(sentence, translation) {
+                outputDiv.innerHTML = `<p><strong>Deutsch:</strong> ${sentence}</p>`;
+                outputDiv.innerHTML += `<p><strong>Übersetzung:</strong> ${translation}</p>`;
+            }
+
+            startButton.addEventListener("click", function() {
+                sentences = textInput.value.split(".").map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
+                currentIndex = 0;
+                isPlaying = true;
+                handlePlay();
+            });
+
+            stopButton.addEventListener("click", function() {
+                speechSynthesis.cancel();
+                isPlaying = false;
+            });
+
+            prevButton.addEventListener("click", function() {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    speakText(sentences[currentIndex]);
+                    const translation = translateText(sentences[currentIndex], languageSelect.value);
+                    updateOutput(sentences[currentIndex], translation);
+                }
+            });
+
+            nextButton.addEventListener("click", function() {
+                if (currentIndex < sentences.length - 1) {
+                    currentIndex++;
+                    speakText(sentences[currentIndex]);
+                    const translation = translateText(sentences[currentIndex], languageSelect.value);
+                    updateOutput(sentences[currentIndex], translation);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
