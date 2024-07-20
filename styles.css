@@ -1,6 +1,6 @@
 body {
     font-family: 'Arial', sans-serif;
-    background-color: #f5f5f5;
+    background-color: #f0f4f8;
     margin: 0;
     padding: 0;
 }
@@ -10,6 +10,7 @@ header {
     color: white;
     padding: 20px;
     text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 main {
@@ -21,22 +22,24 @@ main {
 
 textarea {
     width: 80%;
-    height: 100px;
-    padding: 10px;
-    border-radius: 5px;
+    height: 150px;
+    padding: 15px;
+    border-radius: 8px;
     border: 1px solid #ddd;
     margin-bottom: 20px;
+    font-size: 16px;
 }
 
 button {
-    padding: 10px;
+    padding: 12px 20px;
     font-size: 16px;
-    border-radius: 5px;
+    border-radius: 8px;
     border: none;
     color: white;
     background-color: #007BFF;
     cursor: pointer;
     margin: 5px;
+    transition: background-color 0.3s;
 }
 
 button:hover {
@@ -45,6 +48,7 @@ button:hover {
 
 #sentence-section {
     width: 80%;
+    text-align: center;
 }
 
 #countdown {
@@ -66,4 +70,10 @@ button:hover {
 
 .incorrect {
     color: red;
+}
+
+#controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
