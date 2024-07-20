@@ -90,6 +90,9 @@
     </div>
     <div id="output"></div>
 
+    <!-- Include ResponsiveVoice library -->
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=YOUR_API_KEY"></script>
+    
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const textInput = document.getElementById("textInput");
@@ -104,52 +107,44 @@
             let currentIndex = 0;
             let isPlaying = false;
             let isPaused = false;
-            let utterance;
-            let synth = window.speechSynthesis;
 
             function fetchTranslation(text, targetLang) {
-                // Use a free translation service or dictionary here
-                return new Promise(resolve => {
-                    // This is a dummy translation; replace with actual free service
-                    resolve(text + ' (translated to ' + targetLang + ')');
-                });
+                // Open Google Translate with the text to translate
+                const url = `https://translate.google.com/?sl=de&tl=${targetLang}&text=${encodeURIComponent(text)}`;
+                window.open(url, '_blank');
             }
 
             function speakText(text) {
-                if (utterance) {
-                    synth.cancel(); // Cancel previous utterance if any
-                }
-                utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'de-DE'; // German language
-                synth.speak(utterance);
+                responsiveVoice.speak(text, "German Female", {
+                    onend: function() {
+                        if (currentIndex < sentences.length - 1 && isPlaying) {
+                            currentIndex++;
+                            handlePlay();
+                        }
+                    }
+                });
             }
 
             async function handlePlay() {
                 if (sentences.length > 0 && currentIndex < sentences.length) {
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = await fetchTranslation(sentence, languageSelect.value);
-                    updateOutput(sentence, translation);
+                    fetchTranslation(sentence, languageSelect.value);
                     isPlaying = true;
                     isPaused = false;
                     toggleButton.textContent = "Stoppen";
                 }
             }
 
-            function updateOutput(sentence, translation) {
-                outputDiv.innerHTML = `<p><strong>Deutsch:</strong> ${sentence}</p>`;
-                outputDiv.innerHTML += `<p><strong>Übersetzung:</strong> ${translation}</p>`;
-            }
-
-            startButton.addEventListener("click", async function() {
+            startButton.addEventListener("click", function() {
                 sentences = textInput.value.split(".").map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
                 currentIndex = 0;
-                await handlePlay();
+                handlePlay();
             });
 
             toggleButton.addEventListener("click", function() {
                 if (isPlaying) {
-                    synth.cancel();
+                    responsiveVoice.cancel();
                     isPlaying = false;
                     isPaused = true;
                     toggleButton.textContent = "Fortsetzen";
@@ -159,23 +154,21 @@
                 }
             });
 
-            prevButton.addEventListener("click", async function() {
+            prevButton.addEventListener("click", function() {
                 if (currentIndex > 0) {
                     currentIndex--;
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = await fetchTranslation(sentence, languageSelect.value);
-                    updateOutput(sentence, translation);
+                    fetchTranslation(sentence, languageSelect.value);
                 }
             });
 
-            nextButton.addEventListener("click", async function() {
+            nextButton.addEventListener("click", function() {
                 if (currentIndex < sentences.length - 1) {
                     currentIndex++;
                     const sentence = sentences[currentIndex];
                     speakText(sentence);
-                    const translation = await fetchTranslation(sentence, languageSelect.value);
-                    updateOutput(sentence, translation);
+                    fetchTranslation(sentence, languageSelect.value);
                 }
             });
         });
