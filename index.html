@@ -3,237 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprachübung</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            color: #333;
-        }
-        h1 {
-            margin-bottom: 20px;
-            color: #007BFF;
-        }
-        textarea {
-            width: 80%;
-            height: 100px;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        button {
-            margin: 5px;
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        button {
-            background-color: #007BFF;
-            color: white;
-            cursor: pointer;
-            border: none;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #output {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            background-color: #fff;
-            width: 80%;
-            border-radius: 5px;
-            text-align: left;
-        }
-        #controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #countdown {
-            margin-top: 20px;
-            font-size: 24px;
-            color: #d9534f;
-        }
-        #recording-status {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-        #recordedText {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #28a745;
-        }
-        #differences {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #dc3545;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+    <title>Sprachübung Plattform</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Sprachübung</h1>
-    <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
-    <button id="startButton">Starten</button>
-    <div id="controls">
-        <p id="currentSentence" class="hidden"></p>
-        <button id="recordButton" class="hidden">Aufnehmen</button>
-        <p id="countdown" class="hidden">15</p>
-        <div id="recording-status" class="hidden"></div>
-        <div id="recordedText" class="hidden"></div>
-        <div id="differences" class="hidden"></div>
-        <button id="playRecorded" class="hidden">Aufgenommenes abspielen</button>
-    </div>
-
-    <script>
-        let sentences = [];
-        let currentIndex = 0;
-        let recording = false;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let recognition;
-
-        document.getElementById('startButton').addEventListener('click', function() {
-            const textInput = document.getElementById('textInput').value;
-            sentences = textInput.split('.').map(sentence => sentence.trim()).filter(sentence => sentence.length > 0);
-            currentIndex = 0;
-            displaySentence();
-        });
-
-        document.getElementById('recordButton').addEventListener('click', function() {
-            if (!recording) {
-                startRecording();
-            } else {
-                stopRecording();
-            }
-        });
-
-        document.getElementById('playRecorded').addEventListener('click', function() {
-            playRecordedAudio();
-        });
-
-        function displaySentence() {
-            if (currentIndex < sentences.length) {
-                const sentence = sentences[currentIndex];
-                document.getElementById('currentSentence').innerText = sentence;
-                document.getElementById('currentSentence').classList.remove('hidden');
-                speakText(sentence);
-            }
-        }
-
-        function speakText(text) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'de-DE';
-            speechSynthesis.speak(utterance);
-            utterance.onend = function() {
-                startCountdown();
-            };
-        }
-
-        function startCountdown() {
-            const countdownElem = document.getElementById('countdown');
-            countdownElem.classList.remove('hidden');
-            let timeLeft = 15;
-            countdownElem.innerText = timeLeft;
-            const intervalId = setInterval(function() {
-                timeLeft--;
-                countdownElem.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(intervalId);
-                    document.getElementById('recordButton').classList.remove('hidden');
-                    document.getElementById('recording-status').classList.remove('hidden');
-                    document.getElementById('recording-status').innerText = 'Sie können jetzt aufnehmen!';
-                    document.getElementById('currentSentence').classList.add('hidden');
-                    startSpeechRecognition();
-                }
-            }, 1000);
-        }
-
-        function startSpeechRecognition() {
-            if (!('webkitSpeechRecognition' in window)) {
-                alert('Speech Recognition API is not supported in this browser.');
-                return;
-            }
-            recognition = new webkitSpeechRecognition();
-            recognition.lang = 'de-DE';
-            recognition.interimResults = false;
-            recognition.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('recordedText').innerText = 'Ihre Aufnahme: ' + transcript;
-                compareTexts(sentences[currentIndex], transcript);
-            };
-            recognition.onerror = function(event) {
-                document.getElementById('recording-status').innerText = 'Fehler beim Aufnehmen.';
-            };
-            recognition.start();
-        }
-
-        function startRecording() {
-            const stream = navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.then(function(mediaStream) {
-                mediaRecorder = new MediaRecorder(mediaStream);
-                mediaRecorder.ondataavailable = function(event) {
-                    recordedChunks.push(event.data);
-                };
-                mediaRecorder.onstop = function() {
-                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                    const audioURL = URL.createObjectURL(blob);
-                    document.getElementById('playRecorded').classList.remove('hidden');
-                    document.getElementById('recording-status').innerText = 'Aufnahme beendet! Sie können die Aufnahme jetzt abspielen.';
-                    recordedChunks = [];
-                    document.getElementById('recordedText').innerText = 'Ihre Aufnahme: ' + audioURL;
-                };
-                mediaRecorder.start();
-                recording = true;
-                document.getElementById('recordButton').innerText = 'Stoppen';
-                document.getElementById('recording-status').innerText = 'Aufnahme läuft...';
-            });
-        }
-
-        function stopRecording() {
-            mediaRecorder.stop();
-            recording = false;
-            document.getElementById('recordButton').innerText = 'Aufnehmen';
-        }
-
-        function playRecordedAudio() {
-            const audioElement = document.createElement('audio');
-            audioElement.src = document.getElementById('recordedText').innerText.split(' ')[2];
-            audioElement.controls = true;
-            document.getElementById('output').appendChild(audioElement);
-            audioElement.play();
-        }
-
-        function compareTexts(original, recorded) {
-            const differences = findDifferences(original, recorded);
-            document.getElementById('differences').innerHTML = differences;
-            document.getElementById('differences').classList.remove('hidden');
-        }
-
-        function findDifferences(original, recorded) {
-            // Simple difference finder for demonstration
-            const originalWords = original.split(' ');
-            const recordedWords = recorded.split(' ');
-            let result = '<strong>Unterschiede:</strong><br>';
-
-            for (let i = 0; i < originalWords.length; i++) {
-                if (recordedWords[i] !== originalWords[i]) {
-                    result += `<span style="color: red;">Original: ${originalWords[i]}</span> <span style="color: green;">Aufgenommen: ${recordedWords[i] || 'N/A'}</span><br>`;
-                }
-            }
-            return result;
-        }
-    </script>
+    <header>
+        <h1>Sprachübung Plattform</h1>
+    </header>
+    <main>
+        <section id="input-section">
+            <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
+            <button id="startButton">Starten</button>
+        </section>
+        <section id="sentence-section" class="hidden">
+            <p id="currentSentence"></p>
+            <div id="controls">
+                <button id="recordButton">Aufnehmen</button>
+                <p id="countdown">15</p>
+                <p id="recording-status" class="hidden"></p>
+                <div id="recordedText" class="hidden"></div>
+                <div id="differences" class="hidden"></div>
+                <button id="playRecorded" class="hidden">Aufgenommenes abspielen</button>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Sprachübung Plattform</p>
+    </footer>
+    <script src="app.js"></script>
 </body>
 </html>
