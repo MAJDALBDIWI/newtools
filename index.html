@@ -67,6 +67,19 @@
             margin-top: 20px;
             font-size: 18px;
         }
+        #recordedText {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #28a745;
+        }
+        #differences {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #dc3545;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -74,12 +87,13 @@
     <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
     <button id="startButton">Starten</button>
     <div id="controls">
-        <p id="currentSentence"></p>
-        <button id="recordButton" disabled>Aufnehmen</button>
-        <p id="countdown">15</p>
-        <div id="recording-status"></div>
-        <button id="playRecorded" disabled>Aufgenommenes abspielen</button>
-        <div id="output"></div>
+        <p id="currentSentence" class="hidden"></p>
+        <button id="recordButton" class="hidden">Aufnehmen</button>
+        <p id="countdown" class="hidden">15</p>
+        <div id="recording-status" class="hidden"></div>
+        <div id="recordedText" class="hidden"></div>
+        <div id="differences" class="hidden"></div>
+        <button id="playRecorded" class="hidden">Aufgenommenes abspielen</button>
     </div>
 
     <script>
@@ -88,6 +102,7 @@
         let recording = false;
         let mediaRecorder;
         let recordedChunks = [];
+        let recognition;
 
         document.getElementById('startButton').addEventListener('click', function() {
             const textInput = document.getElementById('textInput').value;
@@ -112,8 +127,8 @@
             if (currentIndex < sentences.length) {
                 const sentence = sentences[currentIndex];
                 document.getElementById('currentSentence').innerText = sentence;
+                document.getElementById('currentSentence').classList.remove('hidden');
                 speakText(sentence);
-                startCountdown();
             }
         }
 
@@ -121,10 +136,14 @@
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'de-DE';
             speechSynthesis.speak(utterance);
+            utterance.onend = function() {
+                startCountdown();
+            };
         }
 
         function startCountdown() {
             const countdownElem = document.getElementById('countdown');
+            countdownElem.classList.remove('hidden');
             let timeLeft = 15;
             countdownElem.innerText = timeLeft;
             const intervalId = setInterval(function() {
@@ -132,30 +151,54 @@
                 countdownElem.innerText = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(intervalId);
-                    document.getElementById('recordButton').disabled = false;
+                    document.getElementById('recordButton').classList.remove('hidden');
+                    document.getElementById('recording-status').classList.remove('hidden');
                     document.getElementById('recording-status').innerText = 'Sie können jetzt aufnehmen!';
+                    document.getElementById('currentSentence').classList.add('hidden');
+                    startSpeechRecognition();
                 }
             }, 1000);
         }
 
-        async function startRecording() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = function(event) {
-                recordedChunks.push(event.data);
+        function startSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Speech Recognition API is not supported in this browser.');
+                return;
+            }
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.interimResults = false;
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('recordedText').innerText = 'Ihre Aufnahme: ' + transcript;
+                compareTexts(sentences[currentIndex], transcript);
             };
-            mediaRecorder.onstop = function() {
-                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                const audioURL = URL.createObjectURL(blob);
-                document.getElementById('playRecorded').disabled = false;
-                document.getElementById('recording-status').innerText = 'Aufnahme beendet! Sie können die Aufnahme jetzt abspielen.';
-                recordedChunks = [];
-                document.getElementById('recordedAudio').src = audioURL;
+            recognition.onerror = function(event) {
+                document.getElementById('recording-status').innerText = 'Fehler beim Aufnehmen.';
             };
-            mediaRecorder.start();
-            recording = true;
-            document.getElementById('recordButton').innerText = 'Stoppen';
-            document.getElementById('recording-status').innerText = 'Aufnahme läuft...';
+            recognition.start();
+        }
+
+        function startRecording() {
+            const stream = navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.then(function(mediaStream) {
+                mediaRecorder = new MediaRecorder(mediaStream);
+                mediaRecorder.ondataavailable = function(event) {
+                    recordedChunks.push(event.data);
+                };
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    const audioURL = URL.createObjectURL(blob);
+                    document.getElementById('playRecorded').classList.remove('hidden');
+                    document.getElementById('recording-status').innerText = 'Aufnahme beendet! Sie können die Aufnahme jetzt abspielen.';
+                    recordedChunks = [];
+                    document.getElementById('recordedText').innerText = 'Ihre Aufnahme: ' + audioURL;
+                };
+                mediaRecorder.start();
+                recording = true;
+                document.getElementById('recordButton').innerText = 'Stoppen';
+                document.getElementById('recording-status').innerText = 'Aufnahme läuft...';
+            });
         }
 
         function stopRecording() {
@@ -166,10 +209,30 @@
 
         function playRecordedAudio() {
             const audioElement = document.createElement('audio');
-            audioElement.src = document.getElementById('recordedAudio').src;
+            audioElement.src = document.getElementById('recordedText').innerText.split(' ')[2];
             audioElement.controls = true;
             document.getElementById('output').appendChild(audioElement);
             audioElement.play();
+        }
+
+        function compareTexts(original, recorded) {
+            const differences = findDifferences(original, recorded);
+            document.getElementById('differences').innerHTML = differences;
+            document.getElementById('differences').classList.remove('hidden');
+        }
+
+        function findDifferences(original, recorded) {
+            // Simple difference finder for demonstration
+            const originalWords = original.split(' ');
+            const recordedWords = recorded.split(' ');
+            let result = '<strong>Unterschiede:</strong><br>';
+
+            for (let i = 0; i < originalWords.length; i++) {
+                if (recordedWords[i] !== originalWords[i]) {
+                    result += `<span style="color: red;">Original: ${originalWords[i]}</span> <span style="color: green;">Aufgenommen: ${recordedWords[i] || 'N/A'}</span><br>`;
+                }
+            }
+            return result;
         }
     </script>
 </body>
