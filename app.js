@@ -105,16 +105,16 @@ function startRecording() {
             recordedChunks.push(event.data);
         };
         mediaRecorder.onstop = function() {
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-            const audioURL = URL.createObjectURL(blob);
-            document.getElementById('recordedText').innerText = 'Ihre Aufnahme: ' + audioURL;
-            document.getElementById('playRecorded').classList.remove('hidden');
+            const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio(audioUrl);
+            audio.play();
             recordedChunks = [];
         };
         mediaRecorder.start();
         recording = true;
-        document.getElementById('recordButton').innerText = 'Stoppen';
         document.getElementById('recording-status').innerText = 'Aufnahme läuft...';
+        document.getElementById('recordButton').innerText = 'Stoppen';
     });
 }
 
