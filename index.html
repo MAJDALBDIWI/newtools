@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Übersetzer Plattform</h1>
+        <h1 id="pageTitle">Übersetzer Plattform</h1>
         <textarea id="textInput" placeholder="Geben Sie hier den deutschen Text ein..."></textarea>
         <div class="controls">
             <label for="languageSelect">Wählen Sie die Sprache:</label>
@@ -23,8 +23,10 @@
             <button id="nextButton">Nächste</button>
         </div>
         <div id="output"></div>
+        <audio id="audioPlayer" controls></audio>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/translate.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
